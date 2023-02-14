@@ -6,8 +6,8 @@ library("Biostrings")
 
 sample_name <- args[1]
 
-blat_results <- read.table(paste0(args[1],"_blat_results.txt"))
-fastas <- readDNAStringSet(paste0(args[1],".fa"))
+blat_results <- read.table(paste0(sample_name,"_blat_results.txt"))
+fastas <- readDNAStringSet(paste0(sample_name,".fa"))
 
 crisprSite <- "GACGCTGCTAGACTACCAGT" %>% DNAStringSet %>% {names(.) <- "crispr";.}
 pcrFull_2490 <- "CAGTGAGTGGTGCTGTTTCCctgaaggaagggactaagggacggtggcgcgggcccggaccggggccccggggcggcggcacggccgatatggcatgctgtcacaaagtaatgctgctgctggacaccgcgggcggcgccgcccgccacagccgggtccggcgggccgccctgcgcctcctcacctatctgagttgccgattcggcctggccagggtccactgggccttcaagttctttgactcgcagggggcgcggagccggccgtcccgcgtgtctgacttccgcgagctggggtcccgctcgtgggaggactttgaggaggagctggaggccaggctcgaggatcgcgcccacctgcccggcccggcgcccagggccacccacacgcacggcgccctgatggagacgctgctagactaccagtgggaccggcccgagatcacgtcgcccacgaagccgatcctgcggagcagcgggaggagactgctggacgtggagagcgaggccaaggaggccgaggccgcgctcgggggcttggtgaacgccgtcttcctcctggccccctgtccgcactcgcagagggagctgctgcagttcgtgtctgggtgcgaggcccaggcccagcgcctgccgcccacccctaagcaggtgatggagaagttgttgcccaagagagtccgggaagtcatggtcgcccgaaaaatcaccttctactgggtggataccaccgaatggtctaaggtaaggaaggttactgtcgtctcagatggcgtgcacggtgctttccttgctaaccaGAACTTGGCAGCGTCCTTAG" %>%
@@ -38,15 +38,15 @@ df2 <- lapply(1:nrow(blat_results),function(i){
   block_ends <- block_starts + block_sizes
   gaps=paste(block_ends[-length(block_ends)],block_starts[-1],sep="_")
   if(length(gaps) > 0){
-    data.frame(blat_results_1$V14,gaps)
+    data.frame(blat_results_1$V14,gaps,
+               "end"=block_starts[-1],
+               "start"=block_ends[-length(block_ends)])
   } else {
   }
 }) %>% do.call("rbind",.)
 
-df3 <- str_split(df2$gaps, "_") %>% unlist %>% as.numeric %>% rbind
-
-gaps_after_crispr <- which(df3[,1] > 66)
-gaps_before_crispr <- which(df3[,2] < 43)
+gaps_after_crispr <- which(df2$start > 66)
+gaps_before_crispr <- which(df2$end < 43)
 
 df2 <- df2[-c(gaps_after_crispr,gaps_before_crispr),]
 
