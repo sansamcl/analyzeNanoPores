@@ -73,4 +73,4 @@ for (i in 1:length(gaps)){
 
 fastas[completeCRISPRSite] %>%
   c(crisprSite,.) %>%
-  writeXStringSet(., "wt.fasta")
+  writeXStringSet(., paste(length(completeCRISPRSite),"wt.fasta",sep="_"))
