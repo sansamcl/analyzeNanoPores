@@ -23,7 +23,6 @@ df <- lapply(1:nrow(blat_results),function(i){
   block_starts <- blat_results_1$V20 %>% str_split(.,",") %>% unlist %>% as.numeric %>% .[!is.na(.)]
   block_ends <- block_starts + block_sizes
   ranges=paste(block_starts,block_ends,sep="_")
-  #gaps=paste(block_ends[-length(block_ends)],block_starts[-1],sep="_")
   data.frame(blat_results_1$V14,block_starts,block_ends,ranges)
 }) %>% do.call("rbind",.)
 
@@ -37,13 +36,19 @@ df2 <- lapply(1:nrow(blat_results),function(i){
   block_sizes <- blat_results_1$V19 %>% str_split(.,",") %>% unlist %>% as.numeric %>% .[!is.na(.)]
   block_starts <- blat_results_1$V20 %>% str_split(.,",") %>% unlist %>% as.numeric %>% .[!is.na(.)]
   block_ends <- block_starts + block_sizes
-  ranges=paste(block_starts,block_ends,sep="_")
   gaps=paste(block_ends[-length(block_ends)],block_starts[-1],sep="_")
   if(length(gaps) > 0){
     data.frame(blat_results_1$V14,gaps)
   } else {
   }
 }) %>% do.call("rbind",.)
+
+df3 <- str_split(df2$gaps, "_") %>% unlist %>% as.numeric %>% rbind
+
+gaps_after_crispr <- which(df3[,1] > 66)
+gaps_before_crispr <- which(df3[,2] < 43)
+
+df2 <- df2[-c(gaps_after_crispr,gaps_before_crispr),]
 
 block_starts <- table(df$block_starts) %>% .[which(.>1)] %>% .[rev(order(.))]
 block_ends <- table(df$block_ends) %>% .[which(.>1)] %>% .[rev(order(.))]
