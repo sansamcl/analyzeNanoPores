@@ -2,12 +2,22 @@
 args = commandArgs(trailingOnly=TRUE)
 
 library(stringr)
-library("Biostrings")
+library(Biostrings)
+library(DECIPHER)
 
 sample_name <- args[1]
 
 blat_results <- read.table(paste0(sample_name,"_blat_results.txt"))
-fastas <- readDNAStringSet(paste0(sample_name,".fa"))
+fastas <- readDNAStringSet(paste0(sample_name,".fa")) 
+
+# get fastas in BLAT results
+fastas_subset <- fastas %>%
+  .[blat_results$V14]
+
+# trim fastas to start and end of blat results
+fastas_trimmed <- DNAStringSet(fastas_subset,
+                               start=blat_results$V16+1,
+                               end=blat_results$V17)
 
 crisprSite <- "GACGCTGCTAGACTACCAGT" %>% DNAStringSet %>% {names(.) <- "crispr";.}
 pcrFull_2490 <- "CAGTGAGTGGTGCTGTTTCCctgaaggaagggactaagggacggtggcgcgggcccggaccggggccccggggcggcggcacggccgatatggcatgctgtcacaaagtaatgctgctgctggacaccgcgggcggcgccgcccgccacagccgggtccggcgggccgccctgcgcctcctcacctatctgagttgccgattcggcctggccagggtccactgggccttcaagttctttgactcgcagggggcgcggagccggccgtcccgcgtgtctgacttccgcgagctggggtcccgctcgtgggaggactttgaggaggagctggaggccaggctcgaggatcgcgcccacctgcccggcccggcgcccagggccacccacacgcacggcgccctgatggagacgctgctagactaccagtgggaccggcccgagatcacgtcgcccacgaagccgatcctgcggagcagcgggaggagactgctggacgtggagagcgaggccaaggaggccgaggccgcgctcgggggcttggtgaacgccgtcttcctcctggccccctgtccgcactcgcagagggagctgctgcagttcgtgtctgggtgcgaggcccaggcccagcgcctgccgcccacccctaagcaggtgatggagaagttgttgcccaagagagtccgggaagtcatggtcgcccgaaaaatcaccttctactgggtggataccaccgaatggtctaaggtaaggaaggttactgtcgtctcagatggcgtgcacggtgctttccttgctaaccaGAACTTGGCAGCGTCCTTAG" %>%
@@ -74,3 +84,17 @@ for (i in 1:length(gaps)){
 fastas[completeCRISPRSite] %>%
   c(crisprSite,.) %>%
   writeXStringSet(., paste(length(completeCRISPRSite),"wt.fasta",sep="_"))
+
+# make consensus of wild type sequences
+wt_consensus <- fastas_trimmed[completeCRISPRSite] %>%
+  AlignSeqs %>% ConsensusSequence(.,threshold = 0.5) %>%
+  {names(.) <- paste(length(completeCRISPRSite),"wt.fasta",sep="_");.}
+
+consensusSeqs <- lapply(1:length(gaps),function(i){
+  gap <- gaps[i] %>% names %>% as.character
+  gap2 <- gaps2[i]
+  samples <- df2$blat_results_1.V14[which(df2$gaps == gap)]
+  fastas_trimmed[samples] %>% AlignSeqs %>% ConsensusSequence(.,threshold = 0.5)
+}) %>% do.call("c",.) %>% {names(.) <- gaps2;.} %>%
+  c(crisprSite,wt_consensus,.) %>%
+  writeXStringSet(., paste(sample_name,"gaps_consensus.fasta",sep="_"))
